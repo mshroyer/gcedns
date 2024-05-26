@@ -8,7 +8,7 @@ import (
 
 func Example() error {
 	ctx := context.Background()
-	c, err := compute.NewAcceleratorTypesClient(ctx)
+	c, err := compute.NewAcceleratorTypesRESTClient(ctx)
 	if err != nil {
 		return err
 	}
