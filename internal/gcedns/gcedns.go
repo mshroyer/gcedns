@@ -16,7 +16,7 @@ import (
 type VMInfo struct {
 	Name         string
 	ExternalIPv4 netip.Addr
-	ExternalIPv6 string
+	ExternalIPv6 netip.Addr
 	ProjectID    string
 	Zone         string
 }
@@ -56,6 +56,9 @@ func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) 
 		if err != nil {
 			return err
 		}
+		if !addr.Is4() {
+			return fmt.Errorf("expected IPv4 address, got %s", addr)
+		}
 		result.ExternalIPv4 = addr
 		return nil
 	})
@@ -84,10 +87,10 @@ func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) 
 // Returns the empty string if the host has no such IPv6 addresses.  If the
 // host has multiple eligible IPv6 addresses, one of them will be returned
 // arbitrarily.
-func getHostIPv6Addr() (string, error) {
+func getHostIPv6Addr() (netip.Addr, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return "", err
+		return netip.IPv6Unspecified(), err
 	}
 
 	for _, iface := range ifaces {
@@ -96,15 +99,31 @@ func getHostIPv6Addr() (string, error) {
 			continue
 		}
 
-		addrs, err := iface.Addrs()
+		ips, err := iface.Addrs()
 		if err != nil {
-			return "", err
+			return netip.IPv6Unspecified(), err
 		}
 
-		for _, addr := range addrs {
-			fmt.Printf("Found address: %s\n", addr)
+		for _, ip := range ips {
+			ipnet, ok := ip.(*net.IPNet)
+			if !ok {
+				return netip.IPv6Unspecified(),
+					fmt.Errorf("cannot parse net.Addr as IPNet: %v", ip)
+			}
+			addr, ok := netip.AddrFromSlice(ipnet.IP)
+			if !ok {
+				return netip.IPv6Unspecified(),
+					fmt.Errorf("cannot convert slice to Addr: %v", ipnet.IP)
+			}
+			if !addr.Is6() || addr.Is4In6() {
+				continue
+			}
+			if !addr.IsGlobalUnicast() {
+				continue
+			}
+			return addr, nil
 		}
 	}
 
-	return "", nil
+	return netip.IPv6Unspecified(), errors.New("no IPv6 addresses found")
 }
