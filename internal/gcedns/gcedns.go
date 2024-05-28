@@ -118,7 +118,7 @@ func getHostIPv6Addr() (netip.Addr, error) {
 			if !addr.Is6() || addr.Is4In6() {
 				continue
 			}
-			if !addr.IsGlobalUnicast() {
+			if !addr.IsGlobalUnicast() || addr.IsPrivate() {
 				continue
 			}
 			return addr, nil
