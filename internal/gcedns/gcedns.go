@@ -2,7 +2,9 @@ package gcedns
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 
 	compute "cloud.google.com/go/compute/apiv1"
 	"cloud.google.com/go/compute/metadata"
@@ -29,20 +31,26 @@ func Example() error {
 	return nil
 }
 
+// GetHostVMInfo returns information about the host VM.
 func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) {
 	if !metadata.OnGCE() {
-		return VMInfo{}, fmt.Errorf("not running on GCE")
+		return VMInfo{}, errors.New("not running on GCE")
 	}
 
+	// Using the default client
 	client := metadata.NewClient(nil)
-	group, ctx := errgroup.WithContext(ctx)
 
+	group, _ := errgroup.WithContext(ctx)
 	group.Go(func() (err error) {
 		result.Name, err = client.InstanceName()
 		return
 	})
 	group.Go(func() (err error) {
 		result.ExternalIPv4, err = client.ExternalIP()
+		return
+	})
+	group.Go(func() (err error) {
+		result.ExternalIPv6, err = getHostIPv6Addr()
 		return
 	})
 	group.Go(func() (err error) {
@@ -59,4 +67,34 @@ func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) 
 		return VMInfo{}, err
 	}
 	return result, nil
+}
+
+// getHostIPv6Addr returns the public, non-temporary IPv6 address of the host.
+//
+// Returns the empty string if the host has no such IPv6 addresses.  If the
+// host has multiple eligible IPv6 addresses, one of them will be returned
+// arbitrarily.
+func getHostIPv6Addr() (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagLoopback != 0 ||
+			iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagRunning == 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", err
+		}
+
+		for _, addr := range addrs {
+			fmt.Printf("Found address: %s\n", addr)
+		}
+	}
+
+	return "", nil
 }
