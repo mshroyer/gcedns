@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 
 	compute "cloud.google.com/go/compute/apiv1"
 	"cloud.google.com/go/compute/metadata"
@@ -14,7 +15,7 @@ import (
 // VMInfo represents a single Compute Engine VM's identifying information.
 type VMInfo struct {
 	Name         string
-	ExternalIPv4 string
+	ExternalIPv4 netip.Addr
 	ExternalIPv6 string
 	ProjectID    string
 	Zone         string
@@ -45,9 +46,18 @@ func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) 
 		result.Name, err = client.InstanceName()
 		return
 	})
-	group.Go(func() (err error) {
-		result.ExternalIPv4, err = client.ExternalIP()
-		return
+	group.Go(func() error {
+		ipstr, err := client.ExternalIP()
+		if err != nil {
+			return err
+		}
+
+		addr, err := netip.ParseAddr(ipstr)
+		if err != nil {
+			return err
+		}
+		result.ExternalIPv4 = addr
+		return nil
 	})
 	group.Go(func() (err error) {
 		result.ExternalIPv6, err = getHostIPv6Addr()
