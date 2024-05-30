@@ -118,6 +118,9 @@ func getHostIPv6Addr() (netip.Addr, error) {
 			if !addr.Is6() || addr.Is4In6() {
 				continue
 			}
+
+			// IsGlobalUnicast() is true even for IPv6 ULA
+			// addresses, so we also need to consult IsPrivate().
 			if !addr.IsGlobalUnicast() || addr.IsPrivate() {
 				continue
 			}
