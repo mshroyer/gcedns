@@ -84,7 +84,7 @@ func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) 
 
 // getHostIPv6Addr returns the public, non-temporary IPv6 address of the host.
 //
-// Returns the empty string if the host has no such IPv6 addresses.  If the
+// Returns IPv6Unspecified() if the host has no such IPv6 addresses.  If the
 // host has multiple eligible IPv6 addresses, one of them will be returned
 // arbitrarily.
 func getHostIPv6Addr() (netip.Addr, error) {
@@ -128,5 +128,6 @@ func getHostIPv6Addr() (netip.Addr, error) {
 		}
 	}
 
-	return netip.IPv6Unspecified(), errors.New("no IPv6 addresses found")
+	// No IPv6 addresses found.
+	return netip.IPv6Unspecified(), nil
 }
