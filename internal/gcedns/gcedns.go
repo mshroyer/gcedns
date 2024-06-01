@@ -14,11 +14,20 @@ import (
 
 // VMInfo represents a single Compute Engine VM's identifying information.
 type VMInfo struct {
-	Name         string
+	// Name of the VM.
+	Name string
+
+	// The VM's external IPv4 address.
 	ExternalIPv4 netip.Addr
+
+	// The VM's external IPv6 address if any, otherwise the empty string.
 	ExternalIPv6 netip.Addr
-	ProjectID    string
-	Zone         string
+
+	// The alphanumeric ID of the VM's project.
+	ProjectID string
+
+	// Zone of the VM, e.g. "us-central1-c".
+	Zone string
 }
 
 func Example() error {
@@ -33,6 +42,8 @@ func Example() error {
 }
 
 // GetHostVMInfo returns information about the host VM.
+//
+// Fails if invoked off of GCE.  Does not require any additional IAM roles.
 func GetHostVMInfo(ctx context.Context, name string) (result VMInfo, err error) {
 	if !metadata.OnGCE() {
 		return VMInfo{}, errors.New("not running on GCE")
