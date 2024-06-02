@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/netip"
 
-	compute "cloud.google.com/go/compute/apiv1"
 	"cloud.google.com/go/compute/metadata"
 	"golang.org/x/sync/errgroup"
 )
@@ -28,17 +27,6 @@ type VMInfo struct {
 
 	// Zone of the VM, e.g. "us-central1-c".
 	Zone string
-}
-
-func Example() error {
-	ctx := context.Background()
-	c, err := compute.NewAcceleratorTypesRESTClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	return nil
 }
 
 // GetHostVMInfo returns information about the host VM.
